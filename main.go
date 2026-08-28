@@ -16,10 +16,13 @@
 // structural offset in every compressed section, confirmed against two independent
 // implementations; not a corrupt/garbage file, but not decompressable with stock tooling
 // either) and the only NSP available (the 2021 launch update alone) has no matching
-// title.key locally, so LibHac can't decrypt its Program NCA either. So unlike ARMS/MK8/S2,
-// **defaultAccessKey and defaultNexVersion below are placeholders, not measured values** —
-// see the "NEX identity" section of README.md for exactly what's blocking each path and
-// what unblocks them.
+// title.key locally, so LibHac can't decrypt its Program NCA either. defaultAccessKey below
+// is CONFIRMED anyway (2026-08-28), the same way MPS's was: a real client's PRUDP CONNECT
+// attempt against this server was captured with the wrong (placeholder) key, and since the
+// PRUDP-Lite signature is a pure function of (accessKey, connectionSig), a brute-force over
+// the full 2^32 8-hex-digit space against that one real (connectionSig, client signature)
+// pair found the exact key with zero ambiguity — no binary read needed. defaultNexVersion
+// is still an era-guess, unconfirmed.
 //
 // Every value that isn't nailed down yet is behind an env var (GOLF_*) so it can be flipped
 // without recompiling once real values are known. See example.env and README.md.
@@ -41,12 +44,11 @@ import (
 )
 
 const (
-	// defaultAccessKey: PLACEHOLDER, not a real measured value -- see the package comment
-	// above and README.md's "NEX identity" section. A wrong access key fails SILENTLY at
-	// SYN (the PRUDP-Lite packet signature simply won't match and the console retries
-	// forever with no error on either side), so don't expect a login attempt to even reach
-	// this server's logs until the real key is in here.
-	defaultAccessKey = "00000000"
+	// defaultAccessKey: CONFIRMED (2026-08-28) via brute-force against a real PRUDP CONNECT
+	// signature captured from a live citron connection attempt -- mathematically certain,
+	// not inferred. See the package comment above and README.md's "NEX identity" section
+	// for the full method.
+	defaultAccessKey = "1cb8027c"
 
 	// defaultNexVersion: PLACEHOLDER. Golf released June 2021, close in time to Mario Party
 	// Superstars (Oct 2021, confirmed NEX 4.6.5) and well past the Pia 5.19 cutover, so

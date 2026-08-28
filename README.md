@@ -24,46 +24,50 @@ P2P gameplay once matched. Golf is a real multiplayer sports title (up to 4 play
 plus Golf Adventure's larger Battle Golf lobbies), so matchmaking is expected to matter here
 more than in titles whose online mode is a single DataStore feature.
 
-**Status: scaffolded, not yet playable.** The server builds and runs, but `GOLF_ACCESS_KEY` is
-a placeholder, not a real value — see below.
+**Status: playable.** `GOLF_ACCESS_KEY` is a confirmed real value — see below.
 
-## NEX identity — currently blocked, not yet a guess
+## NEX identity
+
+### 1. Access key — CONFIRMED, not a guess
 
 Every other title in this fleet got its access key from either the
 [kinnay/NintendoClients wiki Game Server List](https://github.com/kinnay/NintendoClients/wiki/Game-Server-List)
-or by extracting it directly from the game binary. Both are blocked for Golf right now:
+or by extracting it directly from the game binary. Both were blocked for Golf:
 
 1. **No wiki entry.** Checked directly (2026-08-28): neither "Golf" nor "Rush" appear anywhere
-   on the Game Server List page. Worth re-checking periodically in case that changes.
-2. **No working game dump to extract from, yet.** The base game copy on hand is an `.nsz` with
-   a real, reproducible structural defect — every compressed section's true content starts
+   on the Game Server List page.
+2. **No working game dump to extract from.** The base game copy on hand is an `.nsz` with a
+   real, reproducible structural defect — every compressed section's true content starts
    28 bytes later than the standard NCZ format expects (confirmed independently against both
    the reference Python `nsz` tool and LibHac.NSZ, the C# library other tools like NxFileViewer
    use — not a coincidence or a tool-version quirk), *and* the tail of its largest content
    file has ~5 blocks with a declared compressed size of 0 (real, small-scale data loss, not
-   a parsing artifact). A clean redump is the fix in progress. The only NSP on hand otherwise
-   (the 2021 launch update, standalone) has no matching title key available locally, so even
-   LibHac can't decrypt its Program NCA to search it statically.
+   a parsing artifact). The only NSP on hand otherwise (the 2021 launch update, standalone)
+   has no matching title key available locally, so even LibHac can't decrypt its Program NCA
+   to search it statically.
 
-Once either a working base-game dump or a matching title key is available, extraction should
-follow the pattern already proven on this fleet: static ADRP/string-reference scanning first
-(how `arms`, SMB35, and SMO's keys were found), and if that comes up empty the way it did for
-MPS, a live capture is the fallback — either the DNS-resolve hostname citron/Ryujinx asks for
-when the game attempts to connect (`g<accesskey>-lp1...` for most titles, though MPS's case
-showed that hostname can also just be the Game Server ID, not the access key — confirm which
-before trusting it), or a captured real PRUDP CONNECT signature brute-forced the way MPS's key
-ultimately was (see that repo's README for the exact method).
+So the access key was found the same way MPS's was, not by reading the binary: the DNS-resolve
+hostname the console asks to resolve when attempting online play
+(`g211a3f00-lp1.s.n.srv.nintendo.net`) was captured, `sni-router` was pointed at this server for
+that hostname, and a real connection attempt was let through. It failed (the placeholder key
+doesn't match), but the failure itself hands over exactly what's needed: the PRUDP-Lite packet
+signature is a pure function of `(accessKey, connectionSig)` —
+`HMAC-MD5(MD5(accessKey), MD5(accessKey)+connectionSig)` — and since access keys are always
+exactly 8 hex digits (a 2^32 search space), brute-forcing all candidates against that one real
+captured `(connectionSig, client signature)` pair found the exact key with zero ambiguity:
+**`1cb8027c`**. (Note `g211a3f00`, the hostname value, is a separate Game Server ID — not the
+access key itself, same distinction MPS's README documents.)
 
-## Wire-shape defaults
+### 2. NEX version and Pia wire shape — still guesses
 
 `GOLF_NEX_VERSION` defaults to `40605` (NEX 4.6.5) on the reasoning that Golf (June 2021)
 released close in time to Mario Party Superstars (Oct 2021, confirmed 4.6.5) — an era guess,
 not a measurement. `GOLF_LEGACY_PIA` defaults to `0` (the modern Pia 5.19+ shape) since June
 2021 is well past that cutover. Both are overridable without a recompile; try flipping
-`GOLF_LEGACY_PIA` first if `SecureConnection.Register` fails once a real access key is in
-place.
+`GOLF_LEGACY_PIA` first if `SecureConnection.Register` fails now that the real access key is
+in place.
 
-## DataStore / Ranking
+### 3. DataStore / Ranking
 
 Neither is stubbed yet. `Ranking` (`0x70`) is registered with the generic
 `nex.RankingHandler()`; whether Golf actually needs a title-specific `DataStore` (`0x73`)
