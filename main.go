@@ -3,8 +3,8 @@
 // It runs the auth and secure servers in one process.
 //
 // Two NEX servers run in one process:
-//   - auth   (:8453)  TicketGranting — LoginEx issues the Kerberos ticket.
-//   - secure (:60013) SecureConnection + matchmaking + NAT traversal + Utility. Golf is a
+//   - auth   (:8457)  TicketGranting — LoginEx issues the Kerberos ticket.
+//   - secure (:61000) SecureConnection + matchmaking + NAT traversal + Utility. Golf is a
 //     multiplayer sports title (up to 4 players per round, plus Golf Adventure's larger
 //     Battle Golf lobbies), so real matchmaking is expected to matter here, unlike titles
 //     whose online mode is a single DataStore-only feature.
@@ -71,10 +71,18 @@ var (
 	// nextendoHost is the BARE IP the console will dial — NOT host:port. It is used only as
 	// the "address" param of the secure station URL; the port comes from SECURE_PORT.
 	nextendoHost = envOr("NEXTENDO_HOST", "127.0.0.1")
-	// Next free slot after super-mario-odyssey's (8453/60013/8089) in the shared VPS's port
-	// table -- see project_nextendo_vps memory.
-	authPort   = envOrInt("AUTH_PORT", 8454)
-	securePort = envOrInt("SECURE_PORT", 60014)
+	// Ports chosen at deploy time: mario-strikers/mhgu had already claimed 8454-8456 and
+	// 60014-60015 on the shared VPS despite not showing it in their own local example.env
+	// (always check the box's actual listening sockets, not just sibling repos, before
+	// picking a port). securePort is deliberately outside the box's 32768-60999 ephemeral
+	// range (`cat /proc/sys/net/ipv4/ip_local_port_range`) -- every other title's secure
+	// port sits inside that range and works fine in practice since they only bind once at
+	// startup, but a fresh bind attempt can transiently collide with someone else's outbound
+	// connection that happened to get assigned the same port a moment earlier (hit this
+	// directly: sni-router's own ephemeral source port to nx-dauth was sitting on 60016
+	// for the few seconds this server's first few restart attempts tried to claim it).
+	authPort   = envOrInt("AUTH_PORT", 8457)
+	securePort = envOrInt("SECURE_PORT", 61000)
 
 	securePassword = envOr("NEXTENDO_SECURE_PASSWORD", "securepasswordplz1")
 	certFile       = envOr("CERT_FILE", "cert.pem")
@@ -115,7 +123,7 @@ func legacyPia() bool { return envOr("GOLF_LEGACY_PIA", "0") != "0" }
 func main() {
 	settings := nex.NewSwitchSettings(accessKey, nexVersion)
 
-	// --- Auth server (:8454) ---
+	// --- Auth server (:8457) ---
 	// The scheme of this station URL is how the client decides the target is a secure server
 	// and therefore hands over its Kerberos ticket in CONNECT — see stationScheme() above.
 	secureURL := nex.NewStationURL(stationScheme())
@@ -141,8 +149,8 @@ func main() {
 	authEndpoint.OnRMC = logRMC("Auth")
 	authServer := nex.NewServer(authEndpoint)
 
-	// --- Secure server (:60014) ---
-	// Its OWN settings, scoped on purpose: the auth (:8454) is a separate PRUDP server and
+	// --- Secure server (:61000) ---
+	// Its OWN settings, scoped on purpose: the auth (:8457) is a separate PRUDP server and
 	// must keep the default minor version. Cf. secureMinor().
 	secureSettings := nex.NewSwitchSettings(accessKey, nexVersion)
 	secureSettings.PrudpMinorVersion = secureMinor()
