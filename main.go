@@ -160,6 +160,11 @@ func main() {
 	secureEndpoint.SetSecureAccount(securePassword, securePID)
 
 	mm := nex.NewMatchmaking()
+	// Golf uses the same modern Pia config as ACNH, a working P2P title on this fleet, so
+	// match ACNH's matchmaking flags too.
+	mm.PublicStationFirst = true
+	mm.JoinRespExistingCount = true
+	mm.SessionPartPersists = true
 
 	scCfg := nex.LegacyPiaConfig()
 	if !legacyPia() {
@@ -224,15 +229,15 @@ func main() {
 	}
 }
 
-// resolveUser maps a LoginEx username to an account. A valid "nx2." Nextendo token
-// resolves to its persistent PID; anything else gets a stable anonymous PID derived from
-// the username (so the same console keeps the same identity).
-//
-// For a LOCAL test: Citron sends the bare decimal PID from config/nextendo_account.txt
-// (e.g. 1800003542). That is >= 1800000000 and < 1810000000, so branch 2 takes it verbatim,
-// resolveNSAtoPID (the only FAIL-CLOSED path) is never reached, and the single account call
-// nextendoOnlineCheck fails OPEN on any transport error — no account server required.
-func resolveUser(username string, _ []byte) (uint64, []byte, bool) {
+// resolveUser: identical shape to every other Nextendo game server (see
+// monster-hunter-generations-ultimate's resolveUser for the reference this was brought in
+// line with, 2026-08-28 — Golf had been scaffolded from arms/main.go, one of the older
+// templates that predates NexTokenFromLoginExtraData, so it was silently missing the real
+// signed-token binding entirely and REQUIRE_SIGNED_TOKEN=1 rejected every login, proven or
+// not). A valid "nx2." Nextendo token (as the standalone username, or proven via extraData
+// against a bare PID) resolves to its persistent PID; anything else gets a stable anonymous
+// PID derived from the username (so the same console keeps the same identity).
+func resolveUser(username string, extraData []byte) (uint64, []byte, bool) {
 	// The source key encrypts the client ticket and is handed back as pSourceKey, so the
 	// console decrypts it. It MUST be 32 bytes (the Switch kerberos key size).
 	sk := sha256.Sum256([]byte("nextendo-src:" + username))
@@ -253,18 +258,27 @@ func resolveUser(username string, _ []byte) (uint64, []byte, bool) {
 	// identity = the account the game knows itself by (hashing it breaks Pia's
 	// self-recognition → 2618-562 SessionKeepFailed).
 	if n, err := strconv.ParseUint(username, 10, 64); err == nil && n >= 1800000000 {
-		// FAILLE D AUTHENTIFICATION CONNUE. Ce chemin accepte un PID NU comme identite :
-		// aucun jeton, aucune signature. Les PID etant sequentiels depuis 1800000001, il
-		// suffit d envoyer le numero d un autre membre pour jouer sous son identite — et,
-		// via la garde « un seul endroit », l empecher lui-meme de jouer.
-		// On ne peut pas l interdire sechement : l emulateur distribue envoie precisement
-		// ce PID nu. Le refus est donc derriere un interrupteur, a activer quand une build
-		// envoyant le jeton nx2 signe sera deployee. En attendant on journalise chaque usage.
-		if requireSignedToken() {
-			fmt.Printf("[Auth] pid=%d REFUSE : identite par PID nu desactivee (jeton nx2 signe requis)\n", n)
-			return 0, nil, false
+		// The bare PID alone proves nothing — a build >= 1.7.1 also embeds a signed nx2
+		// token in the LoginEx extraData's BAAS id_token ("nnex" claim); check whether it
+		// actually proves this exact PID before trusting it.
+		provenPID, proven := uint64(0), false
+		if tok, ok := nex.NexTokenFromLoginExtraData(extraData); ok {
+			provenPID, proven = nextendoPIDFromToken(tok)
 		}
-		fmt.Printf("[Auth] pid=%d identite par PID NU (non authentifiee — cf. NEXTENDO_REQUIRE_SIGNED_TOKEN)\n", n)
+		if n < 1810000000 {
+			switch {
+			case proven && provenPID == n:
+				fmt.Printf("[Auth][bind] pid=%d OK: nx2 proves the PID\n", n)
+			case proven && provenPID != n:
+				fmt.Printf("[Auth][bind] pid=%d IMPERSONATION: nx2 proves %d, not %d\n", n, provenPID, n)
+			default:
+				fmt.Printf("[Auth][bind] pid=%d NO PROOF: no nx2 in extraData (build < 1.7.1?)\n", n)
+			}
+			if requireSignedToken() && !(proven && provenPID == n) {
+				fmt.Printf("[Auth] pid=%d REFUSE : identite non prouvee (jeton nx2 signe requis)\n", n)
+				return 0, nil, false
+			}
+		}
 		pid, kind := n, "ryujinx"
 		if n >= 1810000000 { // vraie Switch : NSA id -> PID de compte (online = comptes Nextendo UNIQUEMENT)
 			kind = "switch"
