@@ -34,18 +34,6 @@ Every other title in this fleet got its access key from either the
 [kinnay/NintendoClients wiki Game Server List](https://github.com/kinnay/NintendoClients/wiki/Game-Server-List)
 or by extracting it directly from the game binary. Both were blocked for Golf:
 
-1. **No wiki entry.** Checked directly (2026-08-28): neither "Golf" nor "Rush" appear anywhere
-   on the Game Server List page.
-2. **No working game dump to extract from.** The base game copy on hand is an `.nsz` with a
-   real, reproducible structural defect — every compressed section's true content starts
-   28 bytes later than the standard NCZ format expects (confirmed independently against both
-   the reference Python `nsz` tool and LibHac.NSZ, the C# library other tools like NxFileViewer
-   use — not a coincidence or a tool-version quirk), *and* the tail of its largest content
-   file has ~5 blocks with a declared compressed size of 0 (real, small-scale data loss, not
-   a parsing artifact). The only NSP on hand otherwise (the 2021 launch update, standalone)
-   has no matching title key available locally, so even LibHac can't decrypt its Program NCA
-   to search it statically.
-
 So the access key was found the same way MPS's was, not by reading the binary: the DNS-resolve
 hostname the console asks to resolve when attempting online play
 (`g211a3f00-lp1.s.n.srv.nintendo.net`) was captured, `sni-router` was pointed at this server for
