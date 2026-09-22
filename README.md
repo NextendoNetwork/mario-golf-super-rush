@@ -24,11 +24,11 @@ P2P gameplay once matched. Golf is a real multiplayer sports title (up to 4 play
 plus Golf Adventure's larger Battle Golf lobbies), so matchmaking is expected to matter here
 more than in titles whose online mode is a single DataStore feature.
 
-**Status: playable.** `GOLF_ACCESS_KEY` is a confirmed real value — see below.
+**Status: playable.** `GOLF_ACCESS_KEY` is a confirmed real value: see below.
 
 ## NEX identity
 
-### 1. Access key — CONFIRMED, not a guess
+### 1. Access key: CONFIRMED, not a guess
 
 Every other title in this fleet got its access key from either the
 [kinnay/NintendoClients wiki Game Server List](https://github.com/kinnay/NintendoClients/wiki/Game-Server-List)
@@ -39,17 +39,17 @@ hostname the console asks to resolve when attempting online play
 (`g211a3f00-lp1.s.n.srv.nintendo.net`) was captured, `sni-router` was pointed at this server for
 that hostname, and a real connection attempt was let through. It failed (the placeholder key
 doesn't match), but the failure itself hands over exactly what's needed: the PRUDP-Lite packet
-signature is a pure function of `(accessKey, connectionSig)` —
-`HMAC-MD5(MD5(accessKey), MD5(accessKey)+connectionSig)` — and since access keys are always
+signature is a pure function of `(accessKey, connectionSig)`, via
+`HMAC-MD5(MD5(accessKey), MD5(accessKey)+connectionSig)`, and since access keys are always
 exactly 8 hex digits (a 2^32 search space), brute-forcing all candidates against that one real
 captured `(connectionSig, client signature)` pair found the exact key with zero ambiguity:
-**`1cb8027c`**. (Note `g211a3f00`, the hostname value, is a separate Game Server ID — not the
+**`1cb8027c`**. (Note `g211a3f00`, the hostname value, is a separate Game Server ID, not the
 access key itself, same distinction MPS's README documents.)
 
-### 2. NEX version and Pia wire shape — still guesses
+### 2. NEX version and Pia wire shape: still guesses
 
 `GOLF_NEX_VERSION` defaults to `40605` (NEX 4.6.5) on the reasoning that Golf (June 2021)
-released close in time to Mario Party Superstars (Oct 2021, confirmed 4.6.5) — an era guess,
+released close in time to Mario Party Superstars (Oct 2021, confirmed 4.6.5), an era guess,
 not a measurement. `GOLF_LEGACY_PIA` defaults to `0` (the modern Pia 5.19+ shape) since June
 2021 is well past that cutover. Both are overridable without a recompile; try flipping
 `GOLF_LEGACY_PIA` first if `SecureConnection.Register` fails now that the real access key is
@@ -60,7 +60,7 @@ in place.
 Neither is stubbed yet. `Ranking` (`0x70`) is registered with the generic
 `nex.RankingHandler()`; whether Golf actually needs a title-specific `DataStore` (`0x73`)
 stub for post-round score submission the way ARMS and MPS do is unknown until a real client's
-calls show what it expects — see `mario-party-superstars`'s `datastore_stub.go` for the
+calls show what it expects: see `mario-party-superstars`'s `datastore_stub.go` for the
 pattern to follow once that's known.
 
 ## Running
@@ -70,7 +70,7 @@ cp example.env .env    # then edit .env
 go run .
 ```
 
-Configuration is entirely through environment variables — see [`example.env`](example.env). No
+Configuration is entirely through environment variables: see [`example.env`](example.env). No
 secrets are baked into the source.
 
 ## What this is not
@@ -82,5 +82,5 @@ derivable from the game itself, not a secret.
 
 ## License
 
-Released under the **[PolyForm Shield License 1.0.0](LICENSE.md)** — source-available: read, use,
+Released under the **[PolyForm Shield License 1.0.0](LICENSE.md)**, source-available: read, use,
 modify, and self-host, but do not use it to provide a product that competes with Nextendo Network.
