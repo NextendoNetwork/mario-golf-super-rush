@@ -123,6 +123,8 @@ func secureMinor() int { return envOrInt("GOLF_SECURE_MINOR", 0) }
 func legacyPia() bool { return envOr("GOLF_LEGACY_PIA", "0") != "0" }
 
 func main() {
+	// Keep each Golf player's reported UDP endpoint; never substitute by public IP alone.
+	os.Setenv("GOLF_PRESERVE_REPORTED_UDP", "1")
 	settings := nex.NewSwitchSettings(accessKey, nexVersion)
 
 	// --- Auth server (:8457) ---
@@ -160,18 +162,21 @@ func main() {
 	secureEndpoint.SetSecureAccount(securePassword, securePID)
 
 	mm := nex.NewMatchmaking()
-	// Golf uses the same modern Pia config as ACNH, a working P2P title on this fleet, so
-	// match ACNH's matchmaking flags too.
-	mm.PublicStationFirst = true
-	mm.JoinRespExistingCount = true
+	// Golf's Pia 5.33 describes its own station by the public endpoint Register returned, and
+	// a joiner drops the host (2106-0502) unless the session URLs carry that same endpoint
+	// (decrypted mesh join, 2026-09-30). Same configuration as MPS, the same Pia generation.
+	mm.PreservePiaStationIdentity = true
+	mm.PublicStationFirst = false
+	mm.JoinRespExistingCount = false
 	mm.SessionPartPersists = true
 
 	scCfg := nex.LegacyPiaConfig()
 	if !legacyPia() {
 		scCfg = nex.SwitchPia519Config()
 	}
+	scCfg.PreservePiaStationIdentity = true
 	secureEndpoint.Register(nex.ProtocolSecureConnection, nex.SecureConnectionHandlerWithConfig(scCfg))
-	secureEndpoint.Register(nex.ProtocolMatchmakeExtension, mm.ExtensionHandler())
+	secureEndpoint.Register(nex.ProtocolMatchmakeExtension, golfMatchmakingHandler(mm.ExtensionHandler()))
 	secureEndpoint.Register(nex.ProtocolMatchMaking, mm.MatchMakingHandler())
 	secureEndpoint.Register(nex.ProtocolMatchMakingExt, mm.MatchMakingExtHandler())
 	secureEndpoint.Register(nex.ProtocolNATTraversal, nex.NATTraversalHandler())

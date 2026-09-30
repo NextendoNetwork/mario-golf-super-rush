@@ -1,0 +1,19 @@
+# Build outputs
+*.exe
+*.linux
+*.out
+*.so
+*.dll
+*.dylib
+/bin/
+/dist/
+
+# measured / raw binary data
+*.bin
+measured/
+
+# Secrets & local config — never commit these
+.env
+*.pem
+*.key
+*.pfx
