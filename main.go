@@ -176,11 +176,8 @@ func main() {
 	secureEndpoint.Register(nex.ProtocolMatchMakingExt, mm.MatchMakingExtHandler())
 	secureEndpoint.Register(nex.ProtocolNATTraversal, nex.NATTraversalHandler())
 	secureEndpoint.Register(nex.ProtocolUtility, nex.UtilityHandler())
-	// Ranking (0x70): golf scoring is an obvious candidate for real per-round leaderboards,
-	// but whether Golf actually calls Ranking or just DataStore for that hasn't been
-	// observed yet -- registered with the generic handler for now, same starting point
-	// arms/MPS began from before any stub was written.
-	secureEndpoint.Register(nex.ProtocolRanking, nex.RankingHandler())
+	// Ranking (0x70): Ranked Match calls GetRanking right away (see ranking.go).
+	secureEndpoint.Register(nex.ProtocolRanking, golfRankingHandler())
 	// DataStore (0x73): not yet stubbed. Register once a real client's calls show what it
 	// needs -- see mario-party-superstars's datastore_stub.go for the pattern to follow.
 
