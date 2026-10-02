@@ -123,8 +123,6 @@ func secureMinor() int { return envOrInt("GOLF_SECURE_MINOR", 0) }
 func legacyPia() bool { return envOr("GOLF_LEGACY_PIA", "0") != "0" }
 
 func main() {
-	// Keep each Golf player's reported UDP endpoint; never substitute by public IP alone.
-	os.Setenv("GOLF_PRESERVE_REPORTED_UDP", "1")
 	settings := nex.NewSwitchSettings(accessKey, nexVersion)
 
 	// --- Auth server (:8457) ---
